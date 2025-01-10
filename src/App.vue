@@ -52,7 +52,7 @@
       <template #dateCellRender="{ current }">
         <ul class="events">
           <li v-for="(item, index) in getListData(current)" :key="item">
-            <div class="tag" :style="{ background: colorList[index] }">
+            <div class="tag" :style="{ background: randomColor(index) }">
               {{ item }}
             </div>
           </li>
@@ -75,16 +75,19 @@
     >
       <template #renderItem="{ item, index }">
         <a-list-item style="justify-content: left"
-          ><CloseCircleOutlined style="color: red" @click="deletetag(index)"/><a-tag
+          ><CloseCircleOutlined
+            style="color: red"
+            @click="deletetag(index)"
+          /><a-tag
             :bordered="false"
-            :color="colorList[index]"
+            :color="randomColor(index)"
             class="list-tag"
             >{{ item }}</a-tag
           ></a-list-item
         >
       </template>
       <template #header>
-        <div style="text-align: center;">当天已填写内容</div>
+        <div style="text-align: center">当天已填写内容</div>
       </template>
     </a-list>
     <a-textarea
@@ -100,7 +103,32 @@
 import { ref, watch, onMounted } from "vue";
 import { CloseCircleOutlined } from "@ant-design/icons-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN.js";
-const colorList = ["#f56a00", "#7265e6", "#ffbf00", "#00a2ae"];
+const colorList = [
+  "#f56a00",
+  "#7265e6",
+  "#ffbf00",
+  "#00a2ae",
+  "#87d068",
+  "#1d90ff",
+  "#f50000",
+  "#008578",
+  "#009688",
+  "#536dfe",
+  "#ff9800",
+  "#00c853",
+  "#d50000",
+  "#00bfa5",
+  "#ff6d00",
+  "#00e676",
+  "#ff3d00",
+  "#00d5ee",
+  "#ff6400",
+  "#00c100",
+];
+
+const randomColor = (index) => {
+  return colorList[parseInt(Math.random() * 20)];
+};
 
 const value = ref();
 
@@ -120,12 +148,13 @@ const selectDate = ref("");
 const dateNote = ref("");
 
 const select = (selectedDates) => {
-  console.log(selectedDates.format("YYYY-MM-DD"));
+  // console.log(selectedDates.format("YYYY-MM-DD"));
   open.value = true;
   selectDate.value = selectedDates.format("YYYY-MM-DD");
 };
 
 const handleOk = () => {
+  if (!dateNote.value) return;
   selectDate.value in listData.value
     ? listData.value[selectDate.value].push(dateNote.value)
     : (listData.value[selectDate.value] = [dateNote.value]);
@@ -135,7 +164,7 @@ const handleOk = () => {
 };
 
 const deletetag = (index) => {
-  console.log(index);
+  // console.log(index);
   listData.value[selectDate.value].splice(index, 1);
   localStorage.setItem("listData", JSON.stringify(listData.value));
 };
@@ -184,7 +213,7 @@ const getYears = (value) => {
   height: 200px;
   overflow: scroll;
 }
-.list-tag{
+.list-tag {
   margin-left: 10px;
   overflow-x: scroll;
 }
