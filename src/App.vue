@@ -3,7 +3,7 @@
     <template #headerRender="{ value: current, type, onChange, onTypeChange }">
       <div style="padding: 10px">
         <div style="margin-bottom: 10px">行为日历</div>
-        <a-row type="flex" justify="space-between">
+        <!-- <a-row type="flex" justify="space-between">
           <a-col>
             <a-radio-group
               size="small"
@@ -55,7 +55,7 @@
               </a-select-option>
             </a-select>
           </a-col>
-        </a-row>
+        </a-row> -->
       </div>
     </template>
   </a-calendar>
