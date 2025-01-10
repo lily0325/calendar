@@ -1,6 +1,6 @@
 <template>
   <a-config-provider :locale="zhCN">
-    <a-calendar v-model:value="value">
+    <a-calendar v-model:value="value" @select="select">
       <template #headerRender="{ value: current, onChange }">
         <div style="padding: 10px">
           <h2 style="text-align: center">行为日历</h2>
@@ -51,65 +51,93 @@
       </template>
       <template #dateCellRender="{ current }">
         <ul class="events">
-          <li v-for="(item,index) in getListData(current)" :key="item.content">
-            <!-- <a-badge :status="item.type" :text="item.content" /> -->
-            <div class="tag" :style="{'background':colorList[index]}">{{ item.content }}</div>
+          <li v-for="(item, index) in getListData(current)" :key="item">
+            <div class="tag" :style="{ background: colorList[index] }">
+              {{ item }}
+            </div>
           </li>
         </ul>
       </template>
     </a-calendar>
   </a-config-provider>
+  <a-modal
+    v-model:open="open"
+    :title="selectDate"
+    @ok="handleOk"
+    okText="确认"
+    cancelText="取消"
+  >
+    <a-list
+      size="small"
+      bordered
+      :data-source="listData[selectDate]"
+      class="list"
+    >
+      <template #renderItem="{ item, index }">
+        <a-list-item style="justify-content: left"
+          ><CloseCircleOutlined style="color: red" @click="deletetag(index)"/><a-tag
+            :bordered="false"
+            :color="colorList[index]"
+            class="list-tag"
+            >{{ item }}</a-tag
+          ></a-list-item
+        >
+      </template>
+      <template #header>
+        <div style="text-align: center;">当天已填写内容</div>
+      </template>
+    </a-list>
+    <a-textarea
+      style="margin-top: 10px"
+      v-model:value="dateNote"
+      placeholder="填上你想填的内容"
+      :rows="6"
+    />
+  </a-modal>
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
+import { CloseCircleOutlined } from "@ant-design/icons-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN.js";
-
-const colorList = [
-  "#f56a00",
-  "#7265e6",
-  "#ffbf00",
-  "#00a2ae",
-];
+const colorList = ["#f56a00", "#7265e6", "#ffbf00", "#00a2ae"];
 
 const value = ref();
 
+const listData = ref(JSON.parse(localStorage.getItem("listData") || "{}"));
+
 const getListData = (value) => {
-  let listData;
-  // console.log(value.format("MM-DD") );
-  switch (value.date()) {
-    case 8:
-      listData = [
-        { type: "warning", content: "练胸" },
-        { type: "success", content: "This is usual event." },
-      ];
-      break;
-    case 10:
-      listData = [
-        { type: "warning", content: "练背" },
-        { type: "success", content: "This is usual event." },
-        { type: "error", content: "This is error event." },
-      ];
-      break;
-    case 15:
-      listData = [
-        { type: "warning", content: "This is warning event" },
-        { type: "success", content: "This is very long usual event。。...." },
-        { type: "success", content: "This is very long usual event。。...." },
-        { type: "success", content: "This is very long usual event。。...." },
-        { type: "success", content: "This is very long usual event。。...." },
-      ];
-      break;
-    default:
+  if (listData.value) {
+    if (listData.value[value.format("YYYY-MM-DD")]) {
+      return listData.value[value.format("YYYY-MM-DD")];
+    }
   }
-  if (!listData) return [];
-  listData = listData.map((e) => {
-    return {
-      ...e,
-      content: e.content.substring(0, 4),
-    };
-  });
-  return listData || [];
+  return [];
+};
+
+const open = ref(false);
+const selectDate = ref("");
+const dateNote = ref("");
+
+const select = (selectedDates) => {
+  console.log(selectedDates.format("YYYY-MM-DD"));
+  open.value = true;
+  selectDate.value = selectedDates.format("YYYY-MM-DD");
+};
+
+const handleOk = () => {
+  selectDate.value in listData.value
+    ? listData.value[selectDate.value].push(dateNote.value)
+    : (listData.value[selectDate.value] = [dateNote.value]);
+  localStorage.setItem("listData", JSON.stringify(listData.value));
+  // open.value = false;
+  dateNote.value = "";
+};
+
+const deletetag = (index) => {
+  console.log(index);
+  listData.value[selectDate.value].splice(index, 1);
+  localStorage.setItem("listData", JSON.stringify(listData.value));
 };
 
 const getMonths = (value) => {
@@ -142,13 +170,22 @@ const getYears = (value) => {
 .tag {
   font-size: 10px;
   // background: pink;
-  border-radius: 12%;
+  border-radius: 3px;
   padding: 2px;
   width: 100%;
   text-align: center;
-  overflow: hidden;
+  overflow-x: hidden;
+  white-space: nowrap;
   margin-bottom: 2px;
   color: white;
   // font-weight: bold;
+}
+.list {
+  height: 200px;
+  overflow: scroll;
+}
+.list-tag{
+  margin-left: 10px;
+  overflow-x: scroll;
 }
 </style>
