@@ -147,8 +147,13 @@ const open = ref(false);
 const selectDate = ref("");
 const dateNote = ref("");
 
-const select = (selectedDates) => {
+const select = (selectedDates, info) => {
   // console.log(selectedDates.format("YYYY-MM-DD"));
+
+  if (info.source && info.source != "date") {
+    open.value = false;
+    return;
+  }
   open.value = true;
   selectDate.value = selectedDates.format("YYYY-MM-DD");
 };
