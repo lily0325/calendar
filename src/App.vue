@@ -1,225 +1,243 @@
 <template>
   <a-config-provider :locale="zhCN">
-    <a-calendar v-model:value="value" @select="select">
-      <template #headerRender="{ value: current, onChange }">
-        <div style="padding: 10px">
-          <h2 style="text-align: center">行为日历</h2>
-          <a-row type="flex" justify="space-evenly">
-            <a-col>
-              <a-select
-                :dropdown-match-select-width="false"
-                class="my-year-select"
-                :value="String(current.year())"
-                @change="
-                  (newYear) => {
-                    onChange(current.year(+newYear));
-                  }
-                "
-              >
-                <a-select-option
-                  v-for="val in getYears(current)"
-                  :key="String(val)"
-                  class="year-item"
-                >
-                  {{ val }}
-                </a-select-option>
-              </a-select>
-            </a-col>
-            <a-col>
-              <a-select
-                :dropdown-match-select-width="false"
-                :value="String(current.month())"
-                @change="
-                  (selectedMonth) => {
-                    onChange(
-                      current.month(parseInt(String(selectedMonth), 10))
-                    );
-                  }
-                "
-              >
-                <a-select-option
-                  v-for="(val, index) in getMonths(current)"
-                  :key="String(index)"
-                  class="month-item"
-                >
-                  {{ val }}
-                </a-select-option>
-              </a-select>
-            </a-col>
-          </a-row>
-        </div>
-      </template>
-      <template #dateCellRender="{ current }">
-        <ul class="events">
-          <li v-for="(item, index) in getListData(current)" :key="item">
-            <div class="tag" :style="{ background: randomColor(index) }">
-              {{ item }}
-            </div>
-          </li>
-        </ul>
-      </template>
-    </a-calendar>
+    <div class="fitness-app">
+      <!-- 健身统计组件 -->
+      <!-- <FitnessStats
+        :listData="listData"
+        :currentDate="value"
+      /> -->
+      
+      <!-- 日历组件 -->
+      <a-calendar v-model:value="value" @select="select">
+        <!-- 日历头部 -->
+        <template #headerRender="{ value: current, onChange }">
+          <CalendarHeader 
+            :current="current"
+            :onChange="onChange"
+          />
+        </template>
+        
+        <!-- 日期单元格 -->
+        <template #dateCellRender="{ current }">
+          <CalendarCell :records="getListData(current)" />
+        </template>
+      </a-calendar>
+    </div>
   </a-config-provider>
+  
+  <!-- 健身记录详情模态框 -->
   <a-modal
     v-model:open="open"
-    :title="selectDate"
+    :title="selectDate + ' 健身记录'"
     @ok="handleOk"
-    okText="确认"
+    okText="保存"
     cancelText="取消"
+    width="500px"
   >
-    <a-list
-      size="small"
-      bordered
-      :data-source="listData[selectDate]"
-      class="list"
-    >
-      <template #renderItem="{ item, index }">
-        <a-list-item style="justify-content: left"
-          ><CloseCircleOutlined
-            style="color: red"
-            @click="deletetag(index)"
-          /><a-tag
-            :bordered="false"
-            :color="randomColor(index)"
-            class="list-tag"
-            >{{ item }}</a-tag
-          ></a-list-item
-        >
-      </template>
-      <template #header>
-        <div style="text-align: center">当天已填写内容</div>
-      </template>
-    </a-list>
-    <a-textarea
-      style="margin-top: 10px"
-      v-model:value="dateNote"
-      placeholder="填上你想填的内容"
-      :rows="6"
+    <!-- 记录列表 -->
+    <RecordList 
+      :records="listData[selectDate] || []"
+      @delete="deletetag"
+    />
+    
+    <!-- 健身表单 -->
+    <FitnessForm
+      ref="fitnessFormRef"
+      :fitnessTypes="fitnessTypes"
+      :intensityOptions="intensityOptions"
+      :initialValues="newRecord"
+      @update:formState="updateFormState"
     />
   </a-modal>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
-import { CloseCircleOutlined } from "@ant-design/icons-vue";
+import { ref, onMounted, computed } from "vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN.js";
-const colorList = [
-  "#f56a00",
-  "#7265e6",
-  "#ffbf00",
-  "#00a2ae",
-  "#87d068",
-  "#1d90ff",
-  "#f50000",
-  "#008578",
-  "#009688",
-  "#536dfe",
-  "#ff9800",
-  "#00c853",
-  "#d50000",
-  "#00bfa5",
-  "#ff6d00",
-  "#00e676",
-  "#ff3d00",
-  "#00d5ee",
-  "#ff6400",
-  "#00c100",
-];
+import { message } from 'ant-design-vue';
+import dayjs from 'dayjs';
 
-const randomColor = (index) => {
-  return colorList[parseInt(Math.random() * 20)];
-};
+// 导入组件
+import FitnessStats from './components/FitnessStats.vue';
+import CalendarHeader from './components/CalendarHeader.vue';
+import CalendarCell from './components/CalendarCell.vue';
+import RecordList from './components/RecordList.vue';
+import FitnessForm from './components/FitnessForm.vue';
 
-const value = ref();
+// 导入工具函数和数据
+import { 
+  fitnessTypes, 
+  intensityOptions, 
+  saveData, 
+  loadData, 
+  migrateOldData,
+  getRecordsByDate 
+} from './utils/fitnessData';
 
-const listData = ref(JSON.parse(localStorage.getItem("listData") || "{}"));
+// 当前选中的日期
+const value = ref(dayjs());
 
-const getListData = (value) => {
-  if (listData.value) {
-    if (listData.value[value.format("YYYY-MM-DD")]) {
-      return listData.value[value.format("YYYY-MM-DD")];
-    }
-  }
-  return [];
-};
+// 健身记录数据
+const listData = ref(loadData());
 
+// 模态框状态
 const open = ref(false);
 const selectDate = ref("");
-const dateNote = ref("");
 
-const select = (selectedDates, info) => {
-  // console.log(selectedDates.format("YYYY-MM-DD"));
+// 表单状态
+const fitnessFormRef = ref(null);
+const newRecord = ref({
+  type: fitnessTypes[0],
+  duration: 30,
+  intensity: intensityOptions[1],
+  note: ''
+});
 
-  if (info.source && info.source != "date") {
-    open.value = false;
-    return;
-  }
+// 更新表单状态
+const updateFormState = (formState) => {
+  newRecord.value = formState;
+};
+
+// 根据日期获取健身记录
+const getListData = (date) => {
+  if (!date || !listData.value) return [];
+  const dateStr = date.format("YYYY-MM-DD");
+  return listData.value[dateStr] || [];
+};
+
+// 日期选择事件
+const select = (selectedDates) => {
+  // 打开模态框
   open.value = true;
   selectDate.value = selectedDates.format("YYYY-MM-DD");
+  
+  // 重置表单
+  if (fitnessFormRef.value) {
+    fitnessFormRef.value.resetForm();
+  }
 };
 
+// 保存健身记录
 const handleOk = () => {
-  if (!dateNote.value) return;
-  selectDate.value in listData.value
-    ? listData.value[selectDate.value].push(dateNote.value)
-    : (listData.value[selectDate.value] = [dateNote.value]);
-  localStorage.setItem("listData", JSON.stringify(listData.value));
-  // open.value = false;
-  dateNote.value = "";
+  // 表单验证
+  if (!newRecord.value.type || !newRecord.value.duration) {
+    message.error('请完善健身信息');
+    return;
+  }
+  
+  // 创建记录对象
+  const record = {
+    type: newRecord.value.type,
+    duration: newRecord.value.duration,
+    intensity: newRecord.value.intensity,
+    note: newRecord.value.note,
+    timestamp: Date.now()
+  };
+  
+  // 保存到数据中
+  if (selectDate.value in listData.value) {
+    listData.value[selectDate.value].push(record);
+  } else {
+    listData.value[selectDate.value] = [record];
+  }
+  
+  // 保存到本地存储
+  const saveResult = saveData(listData.value);
+  
+  // 提示结果
+  if (saveResult) {
+    message.success('健身记录已保存');
+  } else {
+    message.error('保存失败，请重试');
+  }
+  
+  // 重置表单
+  if (fitnessFormRef.value) {
+    fitnessFormRef.value.resetForm();
+  }
 };
 
+// 删除健身记录
 const deletetag = (index) => {
-  // console.log(index);
+  if (!listData.value[selectDate.value]) return;
+  
   listData.value[selectDate.value].splice(index, 1);
-  localStorage.setItem("listData", JSON.stringify(listData.value));
+  saveData(listData.value);
+  message.success('已删除');
 };
 
-const getMonths = (value) => {
-  const localeData = value.localeData();
-  const months = [];
-  for (let i = 0; i < 12; i++) {
-    months.push(localeData.monthsShort(value.month(i)));
-  }
-  return months;
+// 生成随机健身记录
+const generateRandomFitnessRecord = () => {
+  const typeIndex = Math.floor(Math.random() * fitnessTypes.length);
+  const intensityIndex = Math.floor(Math.random() * intensityOptions.length);
+  const duration = Math.floor(Math.random() * 90) + 10; // 10-100分钟
+  
+  return {
+    type: fitnessTypes[typeIndex],
+    duration: duration,
+    intensity: intensityOptions[intensityIndex],
+    note: `${fitnessTypes[typeIndex].value}锻炼 ${duration}分钟`,
+    timestamp: Date.now() + Math.floor(Math.random() * 1000)
+  };
 };
 
-const getYears = (value) => {
-  const year = value.year();
-  const years = [];
-  for (let i = year - 10; i < year + 10; i += 1) {
-    years.push(i);
+// 生成当月的随机健身数据
+const generateMonthlyData = () => {
+  const today = dayjs();
+  const currentMonth = today.month();
+  const currentYear = today.year();
+  const daysInMonth = today.daysInMonth();
+  
+  const mockData = {};
+  
+  // 为本月的一些日期生成随机健身记录
+  for (let i = 1; i <= daysInMonth; i++) {
+    // 70%的概率生成数据
+    if (Math.random() < 0.7) {
+      const date = dayjs(new Date(currentYear, currentMonth, i));
+      
+      // 如果日期已经超过今天，就跳过
+      if (date.isAfter(today)) continue;
+      
+      const dateStr = date.format('YYYY-MM-DD');
+      
+      // 每天1-3条记录
+      const recordCount = Math.floor(Math.random() * 3) + 1;
+      mockData[dateStr] = [];
+      
+      for (let j = 0; j < recordCount; j++) {
+        mockData[dateStr].push(generateRandomFitnessRecord());
+      }
+    }
   }
-  return years;
+  
+  return mockData;
 };
+
+// 组件挂载时的处理
+onMounted(() => {
+  // 检查数据是否为空
+  if (Object.keys(listData.value).length === 0) {
+    // 首先尝试迁移旧数据
+    const migratedData = migrateOldData();
+    
+    if (migratedData) {
+      listData.value = migratedData;
+      saveData(migratedData);
+      message.success('旧数据已成功迁移到新版本');
+    } else {
+      // 如果没有旧数据，生成随机数据
+      const mockData = generateMonthlyData();
+      listData.value = mockData;
+      saveData(mockData);
+      message.success('已生成示例健身数据');
+    }
+  }
+});
 </script>
 
 <style scoped lang="less">
-.events {
-  list-style: none;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-.tag {
-  font-size: 10px;
-  // background: pink;
-  border-radius: 3px;
-  padding: 2px;
-  width: 100%;
-  text-align: center;
-  overflow-x: hidden;
-  white-space: nowrap;
-  margin-bottom: 2px;
-  color: white;
-  // font-weight: bold;
-}
-.list {
-  height: 200px;
-  overflow: scroll;
-}
-.list-tag {
-  margin-left: 10px;
-  overflow-x: scroll;
+.fitness-app {
+  padding: 20px;
 }
 </style>
