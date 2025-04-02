@@ -4,6 +4,7 @@
     bordered
     :data-source="records"
     class="record-list"
+    :locale="{ emptyText: '今天还没有健身记录，开始添加吧！' }"
   >
     <template #renderItem="{ item, index }">
       <a-list-item style="justify-content: space-between">
@@ -13,40 +14,40 @@
             @click="$emit('delete', index)"
           />
           <a-tag :color="item.type?.color || '#cccccc'" class="list-tag">
-            {{ item.type?.value || '未知类型' }}
+            {{ item.type?.value || "未知类型" }}
           </a-tag>
           <span class="fitness-duration">{{ item.duration || 0 }}分钟</span>
           <a-tag :color="item.intensity?.color || '#cccccc'">
-            {{ item.intensity?.value || '中' }}强度
+            {{ item.intensity?.value || "中" }}强度
           </a-tag>
-          <a-tooltip v-if="item.note" :title="item.note">
+          <!-- <a-tooltip v-if="item.note" :title="item.note">
             <InfoCircleOutlined style="margin-left: 8px" />
-          </a-tooltip>
+          </a-tooltip> -->
         </div>
       </a-list-item>
     </template>
     <template #header>
       <div style="text-align: center">今日健身记录</div>
     </template>
-    <template #empty>
+    <!-- <template #emptyText>
       <div style="text-align: center; padding: 20px;">
         今天还没有健身记录，开始添加吧！
       </div>
-    </template>
+    </template> -->
   </a-list>
 </template>
 
 <script setup>
-import { CloseCircleOutlined, InfoCircleOutlined } from '@ant-design/icons-vue';
+import { CloseCircleOutlined, InfoCircleOutlined } from "@ant-design/icons-vue";
 
 defineProps({
   records: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 });
 
-defineEmits(['delete']);
+defineEmits(["delete"]);
 </script>
 
 <style scoped>

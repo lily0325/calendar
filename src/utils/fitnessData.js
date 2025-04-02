@@ -2,13 +2,13 @@
  * 健身类型选项
  */
 export const fitnessTypes = [
-  { value: '跑步', color: '#f56a00' },
-  { value: '力量训练', color: '#ffbf00' },
-  { value: '游泳', color: '#00a2ae' },
-  { value: '骑行', color: '#87d068' },
-  { value: '篮球', color: '#536dfe' },
-  { value: '足球', color: '#ff9800' },
-  { value: '其他', color: '#00c853' },
+  { id: 1, value: '跑步', color: '#f56a00' },
+  { id: 2, value: '力量训练', color: '#ffbf00' },
+  { id: 3, value: '游泳', color: '#00a2ae' },
+  { id: 4, value: '骑行', color: '#87d068' },
+  { id: 5, value: '篮球', color: '#536dfe' },
+  { id: 6, value: '足球', color: '#ff9800' },
+  { id: 7, value: '其他', color: '#00c853' },
 ];
 
 /**
@@ -44,6 +44,34 @@ export const loadData = () => {
   } catch (error) {
     console.error('加载数据失败:', error);
     return {};
+  }
+};
+
+/**
+ * 保存健身类型数据到本地存储
+ * @param {Array} types 健身类型数据
+ */
+export const saveTypes = (types) => {
+  try {
+    localStorage.setItem("fitnessTypes", JSON.stringify(types));
+    return true;
+  } catch (error) {
+    console.error('保存健身类型失败:', error);
+    return false;
+  }
+};
+
+/**
+ * 从本地存储加载健身类型数据
+ * @returns {Array} 健身类型数据
+ */
+export const loadTypes = () => {
+  try {
+    const savedTypes = localStorage.getItem("fitnessTypes");
+    return savedTypes ? JSON.parse(savedTypes) : null;
+  } catch (error) {
+    console.error('加载健身类型失败:', error);
+    return null;
   }
 };
 
@@ -100,4 +128,34 @@ export const calculateDurationTotal = (date, data) => {
   return records.reduce((total, item) => {
     return total + (item.duration || 0);
   }, 0);
+};
+
+/**
+ * 更新所有健身记录中的健身类型
+ * @param {Object} data 健身记录数据
+ * @param {Array} types 最新的健身类型数据
+ * @returns {Object} 更新后的健身记录数据
+ */
+export const updateRecordTypes = (data, types) => {
+  const typesMap = {};
+  types.forEach(type => {
+    typesMap[type.id] = type;
+  });
+  
+  const updatedData = { ...data };
+  
+  Object.keys(updatedData).forEach(dateStr => {
+    updatedData[dateStr] = updatedData[dateStr].map(record => {
+      // 如果记录中的健身类型存在并且在类型映射中找到对应的ID，则更新为最新的类型数据
+      if (record.type && record.type.id && typesMap[record.type.id]) {
+        return {
+          ...record,
+          type: typesMap[record.type.id]
+        };
+      }
+      return record;
+    });
+  });
+  
+  return updatedData;
 }; 

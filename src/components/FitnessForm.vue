@@ -6,8 +6,8 @@
         name="type"
         :rules="[{ required: true, message: '请选择健身类型' }]"
       >
-        <a-select v-model:value="selectedTypeValue" style="width: 100%">
-          <a-select-option v-for="type in fitnessTypes" :key="type.value" :value="type.value">
+        <a-select v-model:value="selectedTypeId" style="width: 100%">
+          <a-select-option v-for="type in fitnessTypes" :key="type.id" :value="type.id">
             <a-tag :color="type.color">{{ type.value }}</a-tag>
           </a-select-option>
         </a-select>
@@ -67,11 +67,11 @@ const formState = reactive({
   note: props.initialValues.note || ''
 });
 
-// 使用计算属性来处理类型选择
-const selectedTypeValue = computed({
-  get: () => formState.type?.value || '',
-  set: (value) => {
-    formState.type = props.fitnessTypes.find(type => type.value === value) || props.fitnessTypes[0];
+// 使用计算属性来处理类型选择 - 使用ID
+const selectedTypeId = computed({
+  get: () => formState.type?.id || props.fitnessTypes[0]?.id,
+  set: (id) => {
+    formState.type = props.fitnessTypes.find(type => type.id === id) || props.fitnessTypes[0];
   }
 });
 
